@@ -174,6 +174,14 @@ tr.cur td{background:var(--accent-soft)}
 /* topics */
 .topic{display:flex;flex-direction:column;gap:10px;padding:14px 0;border-top:1px solid var(--line-2)}
 .topic:first-child{border-top:0}
+.rrow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line-2)}
+.rrow:first-child{border-top:0}
+.rrow .rn{min-width:0;overflow-wrap:anywhere;font-size:.9rem}
+.rrow select{width:auto;min-width:118px;flex:none;padding:6px 8px;font-size:.85rem}
+.rbar{display:flex;gap:3px;margin-top:6px}
+.rbar i{flex:1;height:6px;border-radius:3px;background:var(--line-2)}
+.rbar i.done{background:var(--accent)}
+.rbar i.prog{background:var(--warn)}
 .topic .row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
 .bubbles{display:flex;gap:6px}
 .bubbles button{width:26px;height:26px;border-radius:50%;border:2px solid var(--ink-3);background:none;padding:0}
@@ -220,7 +228,7 @@ textarea{resize:vertical;min-height:54px}
 <script>
 (function(){
 'use strict';
-var S={plan:null,log:[],topics:{},mocks:{},meta:null,tab:'today',sel:null,filter:'',form:null,settings:false,connErr:''};
+var S={plan:null,log:[],topics:{},mocks:{},readings:{},open:{},meta:null,tab:'today',sel:null,filter:'',form:null,settings:false,connErr:''};
 var dirtyRender=false,tmr=null;
 
 /* ---------- helpers ---------- */
@@ -249,10 +257,28 @@ function topicStats(name){
   var qs=sum(es,function(e){return e.qs}),c=sum(es,function(e){return e.correct});
   return {hours:sum(es,function(e){return e.hours}),sets:sum(es,function(e){return e.sets}),qs:qs,correct:c,acc:qs>0?c/qs:null};
 }
+var READ_ST=['Not started','In progress','Done','Reviewed'];
+function topicCode(name){var t=S.plan&&S.plan.topics.filter(function(x){return x.name===name})[0];return t?t.code:null}
+function readingsFor(code){return code&&S.plan&&S.plan.readings?S.plan.readings.filter(function(r){return r.topic===code}):[]}
+function readingName(lm){var r=S.plan&&S.plan.readings&&S.plan.readings.filter(function(x){return x.lm===Number(lm)})[0];return r?r.name:''}
+function readingStatus(lm){var s=S.readings[String(lm)];return (s&&s.status)||'Not started'}
+function nextReading(code){var rs=readingsFor(code);for(var i=0;i<rs.length;i++){var st=readingStatus(rs[i].lm);if(st!=='Done'&&st!=='Reviewed')return rs[i]}return null}
+function readingStats(lm){
+  var es=activeLog().filter(function(e){return e.lm===lm});
+  var qs=sum(es,function(e){return e.qs}),c=sum(es,function(e){return e.correct});
+  return {hours:sum(es,function(e){return e.hours}),qs:qs,acc:qs>0?c/qs:null};
+}
+function nextLine(text,d){
+  if(inferActivity(text)!=='New material'||!(S.plan&&S.plan.readings))return '';
+  var code=topicCode(inferTopic(text,d));if(!code)return '';
+  var nr=nextReading(code);
+  return nr?'<div class="small" style="margin-top:2px">Next reading: <b>LM '+nr.lm+'</b> '+esc(nr.name)+'</div>':'<div class="small muted" style="margin-top:2px">All readings in this topic are done.</div>';
+}
 function waiting(){
   var n=S.log.filter(function(e){return e.dirty}).length;
   Object.keys(S.topics).forEach(function(k){if(S.topics[k].dirty)n++});
   Object.keys(S.mocks).forEach(function(k){if(S.mocks[k].dirty)n++});
+  Object.keys(S.readings).forEach(function(k){if(S.readings[k].dirty)n++});
   return n;
 }
 function dayState(d,L,t){
@@ -306,13 +332,13 @@ function ghReq(method,path,body,cfg){
   },function(){var e=new Error('offline');e.code='net';throw e});
 }
 function readFile(path,cfg){return ghReq('GET',path,null,cfg).then(function(j){return {sha:j.sha,data:JSON.parse(b64d(j.content))}})}
-function applyOp(m,op){var c=m[op.p[0]];if(!c)return;if(op.t==='del')delete c[op.p[1]];else c[op.p[1]]=op.v}
+function applyOp(m,op){var c=m[op.p[0]];if(!c)c=m[op.p[0]]={};if(op.t==='del')delete c[op.p[1]];else c[op.p[1]]=op.v}
 function recompute(){
   var b=R.state||{log:{},topics:{},mocks:{},meta:null};
-  var m={log:Object.assign({},b.log),topics:Object.assign({},b.topics),mocks:Object.assign({},b.mocks)};
+  var m={log:Object.assign({},b.log),topics:Object.assign({},b.topics),mocks:Object.assign({},b.mocks),readings:Object.assign({},b.readings||{})};
   Q.forEach(function(op){applyOp(m,op)});
   S.log=Object.keys(m.log).map(function(k){return Object.assign({_id:k},m.log[k])});
-  S.topics=m.topics;S.mocks=m.mocks;S.meta=b.meta;S.plan=R.plan;
+  S.topics=m.topics;S.mocks=m.mocks;S.readings=m.readings;S.meta=b.meta;S.plan=R.plan;
 }
 async function loadAll(cfg){
   try{
@@ -353,6 +379,9 @@ async function flush(){
 function poll(){
   if(document.hidden||busy||!CFG||Q.length)return;
   loadAll().then(function(){schedule()});
+}
+function saveReading(lm,status){
+  enqueue([{t:'set',p:['readings',String(lm)],v:{status:status,dirty:true,updatedAt:new Date().toISOString()}}]);
 }
 function saveTopic(code,patch){
   var cur=S.topics[code]||{status:'Not started',confidence:null,notes:''};
@@ -504,7 +533,7 @@ function dayDetail(date,isToday){
     if(!(s[2]>0)&&!s[3])return;shown++;
     var logged=sum(L.filter(function(e){return e.block===s[0]}),function(e){return e.hours});
     var ok=s[2]>0&&logged>=s[2]*0.9;
-    h+='<div class="slot"><div class="what"><div class="label">'+s[1]+' · '+fh(s[2])+'</div>'+esc(s[3]||'Free')+'</div>'
+    h+='<div class="slot"><div class="what"><div class="label">'+s[1]+' · '+fh(s[2])+'</div>'+esc(s[3]||'Free')+nextLine(s[3],d)+'</div>'
      +'<div class="act">'+(s[2]>0?'<span class="pill '+(ok?'good':logged>0?'warn':'')+'">'+(ok?'Done':logged>0?fh(logged)+' logged':'Not logged')+'</span>':'')
      +'<button class="btn small" data-act="log-slot" data-date="'+date+'" data-block="'+s[0]+'">Log</button></div></div>';
   });
@@ -517,7 +546,7 @@ function dayDetail(date,isToday){
 function entryList(es){
   return '<div>'+es.map(function(e){
     var acc=e.qs>0?' · '+e.correct+'/'+e.qs+' ('+pct(e.correct/e.qs)+')':'';
-    return '<button class="entry" data-act="edit" data-id="'+esc(e._id)+'"><span class="t"><b>'+esc(e.topic)+'</b>'+(e.dirty?'<i class="dot" title="Waiting for Excel"></i>':'')+'<br><span class="small muted">'+fmtS(e.date)+' · '+esc(e.block)+' · '+esc(e.activity)+(e.sets?' · '+e.sets+' sets':'')+acc+(e.notes?' · '+esc(e.notes):'')+'</span></span><span class="r num">'+r2(e.hours)+' h</span></button>';
+    return '<button class="entry" data-act="edit" data-id="'+esc(e._id)+'"><span class="t"><b>'+esc(e.topic)+'</b>'+(e.dirty?'<i class="dot" title="Waiting for Excel"></i>':'')+'<br><span class="small muted">'+fmtS(e.date)+' · '+esc(e.block)+' · '+esc(e.activity)+(e.lm?' · LM '+e.lm+' '+esc(readingName(e.lm)):'')+(e.sets?' · '+e.sets+' sets':'')+acc+(e.notes?' · '+esc(e.notes):'')+'</span></span><span class="r num">'+r2(e.hours)+' h</span></button>';
   }).join('')+'</div>';
 }
 
@@ -570,8 +599,22 @@ function vTopics(){
      +'<div class="stats"><div class="stat"><span class="label">Hours</span><b>'+r2(ts.hours)+' / '+r2(tp.newH)+'</b></div><div class="stat"><span class="label">Questions</span><b>'+ts.qs+'</b></div><div class="stat"><span class="label">Accuracy</span><b>'+pct(ts.acc)+'</b></div><div class="stat"><span class="label">Next review</span><b>'+(nextRev?fmtS(nextRev):'–')+'</b></div></div>'
      +'<div class="fgrid"><div class="f"><label for="st-'+tp.code+'">Status</label><select id="st-'+tp.code+'" data-act="status" data-code="'+tp.code+'">'+opts+'</select></div>'
      +'<div class="f"><label>Confidence</label><div class="bubbles">'+bub+'</div></div>'
-     +'<div class="f full"><label for="nt-'+tp.code+'">Notes / weak sub-topics</label><textarea id="nt-'+tp.code+'" data-act="tnotes" data-code="'+tp.code+'">'+esc(st.notes)+'</textarea></div></div></div>';
+     +'<div class="f full"><label for="nt-'+tp.code+'">Notes / weak sub-topics</label><textarea id="nt-'+tp.code+'" data-act="tnotes" data-code="'+tp.code+'">'+esc(st.notes)+'</textarea></div></div>'+readingsBlock(tp)+'</div>';
   }).join('')+'</section>';
+}
+
+function readingsBlock(tp){
+  var rs=readingsFor(tp.code);
+  if(!rs.length)return '';
+  var done=rs.filter(function(r){var x=readingStatus(r.lm);return x==='Done'||x==='Reviewed'}).length;
+  var bar='<div class="rbar" aria-hidden="true">'+rs.map(function(r){var x=readingStatus(r.lm);return '<i class="'+(x==='Done'||x==='Reviewed'?'done':x==='In progress'?'prog':'')+'"></i>'}).join('')+'</div>';
+  var rows=rs.map(function(r){
+    var st=readingStatus(r.lm),rst=readingStats(r.lm);
+    var opts=READ_ST.map(function(o){return '<option'+(st===o?' selected':'')+'>'+o+'</option>'}).join('');
+    var meta=rst.hours>0||rst.qs>0?r2(rst.hours)+' h'+(rst.qs>0?' · '+rst.qs+' Qs · '+pct(rst.acc):''):'Not logged yet';
+    return '<div class="rrow"><div class="rn"><b>LM '+r.lm+'</b> '+esc(r.name)+'<div class="small muted">'+meta+'</div></div><select aria-label="Status of LM '+r.lm+'" data-act="rstatus" data-lm="'+r.lm+'">'+opts+'</select></div>';
+  }).join('');
+  return '<details data-code="'+tp.code+'"'+(S.open[tp.code]?' open':'')+'><summary>Readings · '+done+' of '+rs.length+' done</summary>'+bar+'<div style="margin-top:6px">'+rows+'</div></details>';
 }
 
 function vMocks(){
@@ -597,17 +640,18 @@ function vMocks(){
 /* ---------- log form ---------- */
 function openForm(init,id){
   var p=S.plan;
-  S.form={id:id||null,v:Object.assign({date:today(),block:'Late night',activity:'New material',topic:p.topicList[0],hours:'',sets:'',qs:'',correct:'',notes:''},init||{}),err:'',del:false};
+  S.form={id:id||null,v:Object.assign({date:today(),block:'Late night',activity:'New material',topic:p.topicList[0],lm:'',hours:'',sets:'',qs:'',correct:'',notes:''},init||{}),err:'',del:false};
   renderForm();
 }
 function renderForm(){
   var f=S.form,v=f.v,p=S.plan,dd=p.dropdowns;
   function opts(list,sel){return list.map(function(o){return '<option'+(o===sel?' selected':'')+'>'+esc(o)+'</option>'}).join('')}
-  var prac=/Timed item sets|Mock$|Error log/.test(v.activity);
+  var prac=/Timed item sets|Mock$|Error log/.test(v.activity),rs=readingsFor(topicCode(v.topic));
   $('#overlay').innerHTML='<div class="veil" id="veil"><form class="sheet" id="lf" role="dialog" aria-modal="true" aria-label="Log study"><div class="panel-head"><h2>'+(f.id?'Edit entry':'Log study')+'</h2><button type="button" class="btn small" data-act="close">Close</button></div>'
    +'<div class="fgrid"><div class="f"><label for="fd">Date</label><input id="fd" type="date" value="'+esc(v.date)+'"></div>'
    +'<div class="f"><label for="fb">Block</label><select id="fb">'+opts(dd.blocks,v.block)+'</select></div>'
    +'<div class="f full"><label for="ft">Topic</label><select id="ft">'+opts(p.topicList,v.topic)+'</select></div>'
+   +(rs.length?'<div class="f full"><label for="fr">Reading (optional)</label><select id="fr"><option value="">No specific reading</option>'+rs.map(function(r){var x=readingStatus(r.lm);return '<option value="'+r.lm+'"'+(String(v.lm)===String(r.lm)?' selected':'')+'>LM '+r.lm+' · '+esc(r.name)+(x==='Done'||x==='Reviewed'?' (done)':'')+'</option>'}).join('')+'</select></div>':'')
    +'<div class="f"><label for="fa">Activity</label><select id="fa">'+opts(dd.activities,v.activity)+'</select></div>'
    +'<div class="f"><label for="fh">Hours</label><input id="fh" type="number" step="0.25" min="0" max="16" inputmode="decimal" value="'+esc(v.hours)+'"></div>'
    +(prac?'<div class="f"><label for="fs">Item sets done</label><input id="fs" type="number" min="0" inputmode="numeric" value="'+esc(v.sets)+'"></div><div class="f"><label for="fq">Questions attempted</label><input id="fq" type="number" min="0" inputmode="numeric" value="'+esc(v.qs)+'"></div><div class="f"><label for="fc">Correct</label><input id="fc" type="number" min="0" inputmode="numeric" value="'+esc(v.correct)+'"></div>':'')
@@ -618,6 +662,7 @@ function renderForm(){
 function readForm(){
   var v=S.form.v,g=function(i){var e=$('#'+i);return e?e.value:null};
   v.date=g('fd');v.block=g('fb');v.topic=g('ft');v.activity=g('fa');v.hours=g('fh');v.notes=g('fn');
+  if($('#fr'))v.lm=g('fr');
   if($('#fs')){v.sets=g('fs');v.qs=g('fq');v.correct=g('fc')}
 }
 function submitForm(ev){
@@ -630,7 +675,7 @@ function submitForm(ev){
   else if(prac&&c!=null&&qs==null)err='Enter questions attempted.';
   else if(prac&&qs!=null&&c>qs)err='Correct cannot be more than questions attempted.';
   if(err){f.err=err;$('#ferr').textContent=err;return}
-  var data={date:v.date,block:v.block,topic:v.topic,activity:v.activity,hours:h,sets:prac?sets:null,qs:prac?qs:null,correct:prac?c:null,notes:v.notes||'',dirty:true,deleted:false,updatedAt:new Date().toISOString()};
+  var data={date:v.date,block:v.block,topic:v.topic,activity:v.activity,hours:h,lm:v.lm?Number(v.lm):null,sets:prac?sets:null,qs:prac?qs:null,correct:prac?c:null,notes:v.notes||'',dirty:true,deleted:false,updatedAt:new Date().toISOString()};
   var id=f.id,full;
   if(id){
     var ex=S.log.filter(function(e){return e._id===id})[0]||{};
@@ -638,7 +683,9 @@ function submitForm(ev){
   }else{id=uid();full=Object.assign({excelRow:null,createdAt:data.updatedAt},data)}
   S.form=null;$('#overlay').innerHTML='';
   toast(f.id?'Saved':'Logged '+r2(h)+' h');
-  enqueue([{t:'set',p:['log',id],v:full}]);
+  var ops=[{t:'set',p:['log',id],v:full}];
+  if(full.lm&&readingStatus(full.lm)==='Not started')ops.push({t:'set',p:['readings',String(full.lm)],v:{status:'In progress',dirty:true,updatedAt:data.updatedAt}});
+  enqueue(ops);
 }
 function deleteEntry(){
   var f=S.form;
@@ -693,17 +740,20 @@ document.addEventListener('click',function(ev){
     });
   }
   else if(a==='del'){deleteEntry()}
-  else if(a==='edit'){var e=S.log.filter(function(x){return x._id===b.dataset.id})[0];if(e)openForm({date:e.date,block:e.block,topic:e.topic,activity:e.activity,hours:e.hours,sets:e.sets==null?'':e.sets,qs:e.qs==null?'':e.qs,correct:e.correct==null?'':e.correct,notes:e.notes},e._id)}
+  else if(a==='edit'){var e=S.log.filter(function(x){return x._id===b.dataset.id})[0];if(e)openForm({date:e.date,block:e.block,topic:e.topic,activity:e.activity,hours:e.hours,lm:e.lm==null?'':e.lm,sets:e.sets==null?'':e.sets,qs:e.qs==null?'':e.qs,correct:e.correct==null?'':e.correct,notes:e.notes},e._id)}
   else if(a==='log-date'){openForm({date:b.dataset.date})}
   else if(a==='log-slot'){
     var d=dayMap()[b.dataset.date],blk=b.dataset.block,txt=blk==='Morning'?d.m:blk==='Midday'?d.p:d.l,hrs=blk==='Morning'?d.mh:blk==='Midday'?d.ph:d.lh;
-    openForm({date:b.dataset.date,block:blk,activity:inferActivity(txt),topic:inferTopic(txt,d),hours:hrs||'',sets:inferSets(txt)==null?'':inferSets(txt)});
+    var tp0=inferTopic(txt,d),nr0=inferActivity(txt)==='New material'?nextReading(topicCode(tp0)):null;
+    openForm({date:b.dataset.date,block:blk,activity:inferActivity(txt),topic:tp0,lm:nr0?nr0.lm:'',hours:hrs||'',sets:inferSets(txt)==null?'':inferSets(txt)});
   }
   else if(a==='conf'){var cur=(S.topics[b.dataset.code]||{}).confidence,v=Number(b.dataset.v);saveTopic(b.dataset.code,{confidence:cur===v?null:v})}
 });
 document.addEventListener('change',function(ev){
   var t=ev.target,a=t.dataset&&t.dataset.act;
-  if(t.id==='fa'&&S.form){readForm();renderForm();return}
+  if(t.id==='ft'&&S.form){readForm();var nr1=/New material/.test(S.form.v.activity)?nextReading(topicCode(S.form.v.topic)):null;S.form.v.lm=nr1?nr1.lm:'';renderForm();return}
+  if(t.id==='fa'&&S.form){readForm();if(S.form.v.activity==='New material'&&!S.form.v.lm){var nr2=nextReading(topicCode(S.form.v.topic));if(nr2)S.form.v.lm=nr2.lm}renderForm();return}
+  if(a==='rstatus'){saveReading(t.dataset.lm,t.value);return}
   if(a==='filter'){S.filter=t.value;render()}
   else if(a==='status'){saveTopic(t.dataset.code,{status:t.value})}
   else if(a==='tnotes'){saveTopic(t.dataset.code,{notes:t.value})}
@@ -714,6 +764,7 @@ document.addEventListener('change',function(ev){
     var patch={};patch[k]=val;saveMock(t.dataset.n,patch);
   }
 });
+document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.tagName==='DETAILS'&&d.dataset.code)S.open[d.dataset.code]=d.open},true);
 document.addEventListener('focusout',function(){if(dirtyRender)setTimeout(function(){var a=document.activeElement;if(!(a&&$('#main').contains(a)&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)))render()},60)});
 document.addEventListener('submit',function(ev){if(ev.target.id==='lf')submitForm(ev)});
 $('#addBtn').addEventListener('click',function(){if(S.plan)openForm()});
