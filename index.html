@@ -143,6 +143,19 @@ section.panel{background:var(--surface);border:1px solid var(--line);border-radi
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:11px;height:11px;border-radius:2px;border:1px solid var(--line);display:inline-block}
 
+/* this week */
+.wkgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.wday{display:flex;flex-direction:column;align-items:center;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);padding:6px 2px;min-width:0;line-height:1.3}
+.wday b{font-size:1rem;font-weight:500}
+.wday.done{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.wday.done .small{color:var(--accent-ink);opacity:.85}
+.wday.part{background:var(--accent-soft);border-color:var(--accent)}
+.wday.miss{background:var(--bad-soft);border-color:var(--bad)}
+.wday.rest{border-style:dashed;background:none}
+.wday.today{box-shadow:0 0 0 2px var(--ink)}
+.tline{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--line-2);font-size:.88rem}
+.tline:first-child{border-top:0}
+
 /* weekly bars */
 .weeks{display:flex;align-items:flex-end;gap:3px;height:120px;border-bottom:1px solid var(--line);padding-top:6px}
 .wk{flex:1;min-width:0;height:100%;position:relative;display:flex;align-items:flex-end;justify-content:center;gap:1px}
@@ -433,10 +446,49 @@ function vToday(){
    +'<div class="stat"><span class="label">Questions</span><b>'+qs+'</b></div>'
    +'<div class="stat"><span class="label">Accuracy</span><b>'+pct(qs>0?cor/qs:null)+'</b></div></div></section>';
   h+=dayDetail(t,true);
+  h+=weekSummary(t);
   h+='<div class="grid2"><section class="panel"><div class="panel-head"><h2>Latest entries</h2><button class="btn small" data-act="tab" data-tab="log">All</button></div>'+(recent.length?entryList(recent):'<div class="empty">Nothing logged yet. Tap Log study after your next block.</div>')+'</section>'
    +'<section class="panel"><h2>Coming up</h2>'+(dl.length?dl.map(function(x){var n=diffDays(t,x.date);return '<div class="slot"><div class="what">'+esc(x.label)+'<div class="small muted">'+fmtD(x.date,true)+'</div></div><div class="num">'+(n===0?'today':n+' d')+'</div></div>'}).join(''):'<div class="empty">No dates ahead.</div>')+'</section></div>';
   h+='<div class="small muted" style="text-align:center">'+esc(CFG?CFG.repo:'')+' · <button class="link" data-act="settings">Settings</button></div>';
   return h;
+}
+
+function weekSummary(t){
+  var p=S.plan,cur=dayMap()[t];
+  if(!cur)return '';
+  var L=logByDate(),wk=cur.wk,wd=p.days.filter(function(d){return d.wk===wk}),pw=p.days.filter(function(d){return d.wk===wk-1});
+  function hrs(ds){return sum(ds,function(d){return sum(L[d.d]||[],function(e){return e.hours})})}
+  var plan=sum(wd,function(d){return d.tot}),got=hrs(wd);
+  var past=wd.filter(function(d){return d.d<t}),planPast=sum(past,function(d){return d.tot}),delta=hrs(past)-planPast;
+  var es=[];wd.forEach(function(d){(L[d.d]||[]).forEach(function(e){es.push(e)})});
+  var sets=sum(wd,function(d){return d.sets}),setsDone=sum(es,function(e){return e.sets}),qs=sum(es,function(e){return e.qs}),cor=sum(es,function(e){return e.correct});
+  var due=wd.filter(function(d){return d.d<=t&&d.tot>0}),doneDays=due.filter(function(d){return dayState(d,L,t)==='done'}).length;
+  var learn={},revs={},byTopic={},mock=null;
+  wd.forEach(function(d){if(d.newH>0&&d.topic)learn[d.topic]=1;if(d.rev)d.rev.split(/\s+/).forEach(function(c){if(c)revs[c]=1});if(d.type==='Mock'&&!mock)mock=d});
+  es.forEach(function(e){byTopic[e.topic]=(byTopic[e.topic]||0)+(e.hours||0)});
+  var tops=Object.keys(byTopic).sort(function(a,b){return byTopic[b]-byTopic[a]});
+  var status=!past.length||planPast<=0?'<span class="pill">Week just started</span>':Math.abs(delta)<0.05?'<span class="pill good">On plan</span>':delta>0?'<span class="pill good">Ahead by '+r2(delta)+' h</span>':delta>-2?'<span class="pill warn">Behind by '+r2(-delta)+' h</span>':'<span class="pill bad">Behind by '+r2(-delta)+' h</span>';
+  var strip=wd.map(function(d){
+    var st=dayState(d,L,t),act=sum(L[d.d]||[],function(e){return e.hours});
+    return '<button class="wday '+(st==='up'?'':st)+(d.d===t?' today':'')+'" data-act="goday" data-date="'+d.d+'" aria-label="'+fmtD(d.d)+': '+r2(act)+' of '+r2(d.tot)+' hours"><span class="small">'+d.dow+'</span><b class="num">'+r2(act)+'</b><span class="small muted num">/'+r2(d.tot)+'</span></button>';
+  }).join('');
+  var last=pw.length?'Last week: <span class="num">'+r2(hrs(pw))+'</span> of <span class="num">'+r2(sum(pw,function(d){return d.tot}))+'</span> h ('+pct(hrs(pw)/Math.max(0.01,sum(pw,function(d){return d.tot})))+')':'';
+  var h='<section class="panel"><div class="panel-head"><h2>This week</h2><span class="small muted">Week '+wk+' · '+fmtS(wd[0].d)+' to '+fmtS(wd[wd.length-1].d)+'</span></div>'
+   +'<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><span><b class="num" style="font-size:1.4rem;font-weight:500">'+r2(got)+'</b> <span class="muted">of <span class="num">'+r2(plan)+'</span> h</span></span>'+status+'</div>'
+   +'<div class="bar" role="img" aria-label="Logged '+r2(got)+' of '+r2(plan)+' hours this week"><span style="width:'+Math.min(100,got/Math.max(0.01,plan)*100)+'%"></span><em style="left:'+Math.min(100,planPast/Math.max(0.01,plan)*100)+'%"></em></div>'
+   +'<div class="wkgrid">'+strip+'</div>'
+   +'<div class="stats"><div class="stat"><span class="label">Days on plan</span><b>'+doneDays+' / '+due.length+'</b></div>'
+   +'<div class="stat"><span class="label">Item sets</span><b>'+setsDone+' / '+sets+'</b></div>'
+   +'<div class="stat"><span class="label">Questions</span><b>'+qs+'</b></div>'
+   +'<div class="stat"><span class="label">Accuracy</span><b>'+pct(qs>0?cor/qs:null)+'</b></div></div>';
+  var plan2=[];
+  if(Object.keys(learn).length)plan2.push('<div class="tline"><span class="muted">New material</span><span style="text-align:right">'+Object.keys(learn).map(esc).join(', ')+'</span></div>');
+  if(Object.keys(revs).length)plan2.push('<div class="tline"><span class="muted">Reviews due</span><span class="num">'+Object.keys(revs).map(esc).join(' ')+'</span></div>');
+  if(mock)plan2.push('<div class="tline"><span class="muted">Mock</span><span>'+fmtD(mock.d)+'</span></div>');
+  if(plan2.length)h+='<div>'+plan2.join('')+'</div>';
+  if(tops.length)h+='<div><div class="label" style="margin-bottom:4px">Logged by topic</div>'+tops.map(function(k){return '<div class="tline"><span style="min-width:0;overflow-wrap:anywhere">'+esc(k)+'</span><span class="num">'+r2(byTopic[k])+' h</span></div>'}).join('')+'</div>';
+  if(last)h+='<div class="small muted">'+last+'</div>';
+  return h+'</section>';
 }
 
 function dayDetail(date,isToday){
@@ -610,6 +662,7 @@ document.addEventListener('click',function(ev){
   var a=b.dataset.act;
   if(a==='tab'){S.tab=b.dataset.tab;store('cfaTab',S.tab);render();window.scrollTo(0,0)}
   else if(a==='pick'){S.sel=b.dataset.date;render()}
+  else if(a==='goday'){S.sel=b.dataset.date;S.tab='plan';store('cfaTab','plan');render();window.scrollTo(0,0)}
   else if(a==='nav'){
     var step=Number(b.dataset.step),t0=today(),days=S.plan.days,cur=S.sel||t0;
     if(step===0)S.sel=t0;
