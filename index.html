@@ -300,9 +300,13 @@ function inferActivity(text){
   return 'Other';
 }
 function inferTopic(text,day){
-  var t=(text||'').toLowerCase(),map=[['financial statement','Financial Statement Analysis'],['fsa','Financial Statement Analysis'],['corporate','Corporate Issuers (Corporate Finance)'],['equity','Equity Valuation'],['fixed income','Fixed Income'],['derivatives','Derivatives (& risk management)'],['quantitative','Quantitative Methods'],['portfolio','Portfolio Construction (formerly Portfolio Mgmt)'],['economics','Economics'],['alternative','Alternative Investments'],['ethic','Ethical & Professional Standards (new 2027 content)'],['mixed','Mixed (all topics)'],['mock','Mixed (all topics)']];
+  var t=(text||'').toLowerCase(),map=[['financial statement','FSA'],['fsa','FSA'],['corporate','CI'],['equit','EQ'],['fixed income','FI'],['derivatives','DER'],['quantitative','QM'],['portfolio','PC'],['economics','ECO'],['alternative','ALT'],['ethic','ETH'],['mixed',''],['mock','']];
   var after=t.split(/timed item sets:|new material:/).pop();
-  for(var i=0;i<map.length;i++){if(after.indexOf(map[i][0])>-1)return map[i][1]}
+  for(var i=0;i<map.length;i++){if(after.indexOf(map[i][0])>-1){
+    if(!map[i][1])return 'Mixed (all topics)';
+    var tp=S.plan.topics.filter(function(x){return x.code===map[i][1]})[0];
+    return tp?tp.name:(day&&day.topic?day.topic:'Mixed (all topics)');
+  }}
   return day&&day.topic?day.topic:'Mixed (all topics)';
 }
 function inferSets(text){var m=/^(\d+)/.exec(text||'');return /timed item sets/i.test(text||'')&&m?Number(m[1]):null}
