@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2B4EE0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CFA Hub">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>CFA Study Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: one column on phone with a bottom tab bar; on wide screens the tabs move up into the header and content centres at 880px. */
+:root{
+  --bg:#EDF0F4; --surface:#FFFFFF; --surface-2:#F5F7FA;
+  --ink:#18212E; --ink-2:#4B586A; --ink-3:#7A8697;
+  --line:#D5DBE4; --line-2:#E6EAF0;
+  --accent:#2B4EE0; --accent-ink:#FFFFFF; --accent-soft:#E3E9FD;
+  --good:#1E7A55; --good-soft:#DDF1E8;
+  --warn:#9A5B00; --warn-soft:#FBEBCF;
+  --bad:#B3321F; --bad-soft:#F9E0DB;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --radius:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E131B; --surface:#161D28; --surface-2:#1B2431;
+  --ink:#E7ECF3; --ink-2:#A3AFC0; --ink-3:#74829A;
+  --line:#2B3647; --line-2:#222C3A;
+  --accent:#86A0FF; --accent-ink:#0E131B; --accent-soft:#222E57;
+  --good:#5CCB9A; --good-soft:#173A2D;
+  --warn:#E8B04E; --warn-soft:#3D2E10;
+  --bad:#F28B7B; --bad-soft:#44201B;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E131B; --surface:#161D28; --surface-2:#1B2431;
+  --ink:#E7ECF3; --ink-2:#A3AFC0; --ink-3:#74829A;
+  --line:#2B3647; --line-2:#222C3A;
+  --accent:#86A0FF; --accent-ink:#0E131B; --accent-soft:#222E57;
+  --good:#5CCB9A; --good-soft:#173A2D;
+  --warn:#E8B04E; --warn-soft:#3D2E10;
+  --bad:#F28B7B; --bad-soft:#44201B;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+:root{color-scheme:light}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding-inline:16px;padding-block:0 96px}
+.wrap{max-width:880px;margin-inline:auto}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;line-height:1.15}
+h2{font-size:1.25rem;letter-spacing:-.01em}
+h3{font-size:1rem}
+.label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.muted{color:var(--ink-2)}
+.small{font-size:.85rem}
+
+/* header */
+.top{position:sticky;top:0;z-index:20;background:var(--bg);padding-block:calc(12px + env(safe-area-inset-top,0px)) 10px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;border-bottom:1px solid var(--line)}
+.brand{display:flex;flex-direction:column;min-width:0;margin-right:auto}
+.brand b{font-family:var(--f-display);font-size:1.15rem;letter-spacing:-.01em}
+.brand span{font-size:.78rem;color:var(--ink-3)}
+.sync{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:.78rem;display:inline-flex;align-items:center;gap:7px;color:var(--ink-2)}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--good);display:inline-block}
+.sync.wait i{background:var(--warn)}
+.sync.bad i{background:var(--bad)}
+.link{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;font-size:.85rem}
+details{border:1px solid var(--line-2);border-radius:8px;padding:10px 12px}
+details summary{cursor:pointer;font-weight:600}
+details ol{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:500}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.small{padding:5px 10px;font-size:.82rem}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
+.tabs button{border:0;background:none;padding:9px 2px;border-radius:8px;font-size:.82rem;font-weight:500;color:var(--ink-2)}
+.tabs button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+@media (min-width:760px){
+  body{padding-block:0 48px}
+  .tabs{position:static;border:0;background:none;padding:0;display:flex;gap:4px;width:100%;order:5}
+  .tabs button{padding:8px 16px}
+}
+
+main{display:flex;flex-direction:column;gap:18px;padding-block:18px}
+section.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr;gap:18px}
+@media (min-width:760px){.grid2{grid-template-columns:1fr 1fr}}
+
+/* hero */
+.hero{display:flex;flex-wrap:wrap;gap:6px 20px;align-items:flex-end}
+.big{font-family:var(--f-display);font-size:3.4rem;font-weight:700;letter-spacing:-.03em;line-height:1}
+.bar{height:10px;background:var(--line-2);border-radius:999px;position:relative;overflow:visible}
+.bar>span{display:block;height:100%;background:var(--accent);border-radius:999px}
+.bar>em{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);border-radius:2px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.stat b{display:block;font-family:var(--f-mono);font-size:1.15rem;font-weight:500}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:.75rem;font-weight:600;background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)}
+.pill.good{background:var(--good-soft);color:var(--good);border-color:transparent}
+.pill.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.pill.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.pill.accent{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+
+/* slots */
+.slot{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:12px 0;border-top:1px solid var(--line-2)}
+.slot:first-of-type{border-top:0}
+.slot .what{min-width:0;overflow-wrap:anywhere}
+.slot .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.slot .act{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+
+/* entries */
+.entry{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-top:1px solid var(--line-2);width:100%;text-align:left;background:none;border-inline:0;border-bottom:0;border-radius:0}
+.entry:first-child{border-top:0}
+.entry .t{min-width:0;overflow-wrap:anywhere}
+.entry .r{text-align:right}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warn);margin-left:6px;vertical-align:middle}
+.dategrp{font-weight:600;padding-top:12px;display:flex;justify-content:space-between;gap:10px}
+
+/* heatmap */
+.heat{display:grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;gap:2px;grid-template-columns:repeat(32,1fr)}
+.cell{aspect-ratio:1;border-radius:2px;border:1px solid var(--line);background:var(--surface-2);padding:0;position:relative;min-width:0}
+.cell.done{background:var(--accent);border-color:var(--accent)}
+.cell.part{background:var(--accent-soft);border-color:var(--accent)}
+.cell.miss{background:var(--bad-soft);border-color:var(--bad)}
+.cell.rest{background:none;border-style:dashed}
+.cell.exam{background:var(--ink);border-color:var(--ink)}
+.cell.mock::after{content:"";position:absolute;inset:30%;border-radius:50%;background:var(--warn)}
+.cell.today{box-shadow:0 0 0 2px var(--ink)}
+.cell.sel{outline:2px solid var(--accent);outline-offset:1px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.78rem;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:2px;border:1px solid var(--line);display:inline-block}
+
+/* weekly bars */
+.weeks{display:flex;align-items:flex-end;gap:3px;height:120px;border-bottom:1px solid var(--line);padding-top:6px}
+.wk{flex:1;min-width:0;height:100%;position:relative;display:flex;align-items:flex-end;justify-content:center;gap:1px}
+.wk .p{width:46%;border:1px solid var(--ink-3);border-bottom:0;background:none;border-radius:2px 2px 0 0}
+.wk .a{width:46%;background:var(--accent);border-radius:2px 2px 0 0}
+.wk.cur::after{content:"";position:absolute;left:0;right:0;bottom:-6px;height:3px;background:var(--ink);border-radius:2px}
+
+/* tables */
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.85rem}
+th,td{padding:7px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line-2)}
+th:first-child,td:first-child{text-align:left}
+th{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+tr.cur td{background:var(--accent-soft)}
+
+/* topics */
+.topic{display:flex;flex-direction:column;gap:10px;padding:14px 0;border-top:1px solid var(--line-2)}
+.topic:first-child{border-top:0}
+.topic .row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.bubbles{display:flex;gap:6px}
+.bubbles button{width:26px;height:26px;border-radius:50%;border:2px solid var(--ink-3);background:none;padding:0}
+.bubbles button.on{background:var(--ink);border-color:var(--ink)}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f label{font-size:.75rem;color:var(--ink-3);font-weight:600}
+input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:54px}
+
+/* sheet */
+.veil{position:fixed;inset:0;z-index:50;background:rgba(10,14,20,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:560px;max-height:92%;overflow-y:auto;border-radius:16px 16px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+@media (min-width:760px){.veil{align-items:center}.sheet{border-radius:16px}}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fgrid .full{grid-column:1/-1}
+.err{color:var(--bad);font-size:.85rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:.88rem}
+.empty{border:1px dashed var(--line);border-radius:var(--radius);padding:18px;color:var(--ink-2)}
+.skel{height:14px;border-radius:6px;background:var(--line-2)}
+@media (prefers-reduced-motion:no-preference){.skel{animation:pulse 1.4s ease-in-out infinite}@keyframes pulse{50%{opacity:.45}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><b>CFA Level II</b><span id="brandSub">Exam 20 May 2027 (pending official date)</span></div>
+    <button class="sync" id="syncChip" type="button" aria-label="Excel sync status"><i></i><span id="syncText">Loading</span></button>
+    <button class="btn primary" id="addBtn" type="button">+ Log study</button>
+    <nav class="tabs" id="tabs" role="tablist">
+      <button role="tab" data-tab="today" aria-selected="true">Today</button>
+      <button role="tab" data-tab="log" aria-selected="false">Log</button>
+      <button role="tab" data-tab="plan" aria-selected="false">Plan</button>
+      <button role="tab" data-tab="topics" aria-selected="false">Topics</button>
+      <button role="tab" data-tab="mocks" aria-selected="false">Mocks</button>
+    </nav>
+  </header>
+  <main id="main">
+    <section class="panel"><div class="skel" style="width:40%"></div><div class="skel" style="width:90%"></div><div class="skel" style="width:70%"></div><p class="muted small" style="margin:0">Loading your plan. If this stays empty, open the page signed in to claude.ai.</p></section>
+  </main>
+</div>
+<div id="overlay"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(function(){
+'use strict';
+var S={plan:null,log:[],topics:{},mocks:{},meta:null,tab:'today',sel:null,filter:'',form:null,settings:false,connErr:''};
+var dirtyRender=false,tmr=null;
+
+/* ---------- helpers ---------- */
+function $(s,r){return (r||document).querySelector(s)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function today(){return new Date().toLocaleDateString('en-CA')}
+function dt(s){return new Date(s+'T00:00:00')}
+function diffDays(a,b){return Math.round((dt(b)-dt(a))/864e5)}
+function fmtD(s,withYear){return dt(s).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:withYear?'numeric':undefined})}
+function fmtS(s){return dt(s).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}
+function r2(x){return Math.round(x*100)/100}
+function fh(x){return (x==null?0:r2(x))+' h'}
+function pct(x){return x==null||isNaN(x)?'–':Math.round(x*100)+'%'}
+function num(v){if(v===''||v==null)return null;var n=Number(v);return isNaN(n)?null:n}
+function sum(a,f){var t=0;for(var i=0;i<a.length;i++){t+=f(a[i])||0}return t}
+function toast(msg){var t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(function(){t.hidden=true},2600)}
+function uid(){return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+
+/* ---------- derived data ---------- */
+function activeLog(){return S.log.filter(function(e){return !e.deleted})}
+function dayMap(){var m={};if(S.plan)S.plan.days.forEach(function(d){m[d.d]=d});return m}
+function logByDate(){var m={};activeLog().forEach(function(e){(m[e.date]=m[e.date]||[]).push(e)});return m}
+function topicStats(name){
+  var es=activeLog().filter(function(e){return e.topic===name});
+  var qs=sum(es,function(e){return e.qs}),c=sum(es,function(e){return e.correct});
+  return {hours:sum(es,function(e){return e.hours}),sets:sum(es,function(e){return e.sets}),qs:qs,correct:c,acc:qs>0?c/qs:null};
+}
+function waiting(){
+  var n=S.log.filter(function(e){return e.dirty}).length;
+  Object.keys(S.topics).forEach(function(k){if(S.topics[k].dirty)n++});
+  Object.keys(S.mocks).forEach(function(k){if(S.mocks[k].dirty)n++});
+  return n;
+}
+function dayState(d,L,t){
+  var act=sum(L[d.d]||[],function(e){return e.hours});
+  if(d.type==='Exam')return 'exam';
+  if(d.tot===0)return 'rest';
+  if(act>=d.tot*0.9)return 'done';
+  if(act>0)return 'part';
+  return d.d<t?'miss':'up';
+}
+function inferActivity(text){
+  text=text||'';
+  if(/^MOCK \d/i.test(text))return 'Mock';
+  if(/Mock \d review/i.test(text))return 'Mock review';
+  if(/NEW material/i.test(text))return 'New material';
+  if(/timed item sets/i.test(text))return 'Timed item sets';
+  if(/error/i.test(text))return 'Error log';
+  if(/spaced|light|flashcard|formula|skim/i.test(text))return 'Spaced review';
+  return 'Other';
+}
+function inferTopic(text,day){
+  var t=(text||'').toLowerCase(),map=[['financial statement','Financial Statement Analysis'],['fsa','Financial Statement Analysis'],['corporate','Corporate Issuers (Corporate Finance)'],['equity','Equity Valuation'],['fixed income','Fixed Income'],['derivatives','Derivatives (& risk management)'],['quantitative','Quantitative Methods'],['portfolio','Portfolio Construction (formerly Portfolio Mgmt)'],['economics','Economics'],['alternative','Alternative Investments'],['ethic','Ethical & Professional Standards (new 2027 content)'],['mixed','Mixed (all topics)'],['mock','Mixed (all topics)']];
+  var after=t.split(/timed item sets:|new material:/).pop();
+  for(var i=0;i<map.length;i++){if(after.indexOf(map[i][0])>-1)return map[i][1]}
+  return day&&day.topic?day.topic:'Mixed (all topics)';
+}
+function inferSets(text){var m=/^(\d+)/.exec(text||'');return /timed item sets/i.test(text||'')&&m?Number(m[1]):null}
+
+/* ---------- GitHub store ----------
+   Everything lives in one file, state.json, in a private repo: {log:{id:entry}, topics:{CODE:..}, mocks:{n:..}, meta:{lastSync}}.
+   plan.json (the locked plan from Excel) sits beside it. Edits become small "ops" that are queued on the device,
+   applied on top of the last copy from GitHub, and committed with the file's sha so two devices cannot overwrite each other. */
+var API='https://api.github.com',CFG=null,R={state:null,sha:null,plan:null,planStamp:null},Q=[],busy=false,net='ok',loadErr='',pollN=0;
+if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){var mm=/[?&]api=([^&]+)/.exec(location.search);if(mm)API=decodeURIComponent(mm[1])}
+function loadCfg(){try{var s=store('cfaCfg');CFG=s?JSON.parse(s):null}catch(e){CFG=null}}
+function b64d(s){return decodeURIComponent(escape(atob(s.replace(/\s/g,''))))}
+function b64e(s){return btoa(unescape(encodeURIComponent(s)))}
+function persistQ(){store('cfaQ',JSON.stringify(Q))}
+function cacheSave(){try{store('cfaCache',JSON.stringify({state:R.state,sha:R.sha,plan:R.plan,planStamp:R.planStamp}))}catch(e){}}
+function ghReq(method,path,body,cfg){
+  cfg=cfg||CFG;
+  return fetch(API+'/repos/'+cfg.repo+'/contents/'+path+(method==='GET'?'?ref=main':''),{
+    method:method,cache:'no-cache',
+    headers:Object.assign({'Accept':'application/vnd.github+json','Authorization':'Bearer '+cfg.token,'X-GitHub-Api-Version':'2022-11-28'},body?{'Content-Type':'application/json'}:{}),
+    body:body?JSON.stringify(body):undefined
+  }).then(function(r){
+    if(r.ok)return r.json();
+    var e=new Error('GitHub '+r.status);e.status=r.status;
+    e.code=(r.status===401||r.status===403||r.status===404)?'auth':(r.status===409||r.status===422)?'conflict':'http';
+    throw e;
+  },function(){var e=new Error('offline');e.code='net';throw e});
+}
+function readFile(path,cfg){return ghReq('GET',path,null,cfg).then(function(j){return {sha:j.sha,data:JSON.parse(b64d(j.content))}})}
+function applyOp(m,op){var c=m[op.p[0]];if(!c)return;if(op.t==='del')delete c[op.p[1]];else c[op.p[1]]=op.v}
+function recompute(){
+  var b=R.state||{log:{},topics:{},mocks:{},meta:null};
+  var m={log:Object.assign({},b.log),topics:Object.assign({},b.topics),mocks:Object.assign({},b.mocks)};
+  Q.forEach(function(op){applyOp(m,op)});
+  S.log=Object.keys(m.log).map(function(k){return Object.assign({_id:k},m.log[k])});
+  S.topics=m.topics;S.mocks=m.mocks;S.meta=b.meta;S.plan=R.plan;
+}
+async function loadAll(cfg){
+  try{
+    var s=await readFile('state.json',cfg);
+    var stamp=(s.data.meta&&s.data.meta.lastSync)||'';
+    var plan=R.plan,pst=R.planStamp;
+    if(!plan||pst!==stamp){plan=(await readFile('plan.json',cfg)).data;pst=stamp}
+    R.state=s.data;R.sha=s.sha;R.plan=plan;R.planStamp=pst;net='ok';loadErr='';cacheSave();
+  }catch(e){
+    if(e.code==='net')net='offline';
+    else{net='error';loadErr=e.code==='auth'?'GitHub did not accept the token or repository. Check both in Settings.':'GitHub returned an error ('+e.message+').'}
+    recompute();return false;
+  }
+  recompute();return true;
+}
+function enqueue(ops){Q.push.apply(Q,ops);persistQ();recompute();render();flush()}
+async function flush(){
+  if(busy||!Q.length||!CFG||!R.state)return;
+  busy=true;net=net==='offline'?'offline':'saving';schedule();
+  try{
+    for(var tries=0;tries<4&&Q.length;tries++){
+      var ops=Q.slice(),st=JSON.parse(JSON.stringify(R.state));
+      ops.forEach(function(op){applyOp(st,op)});
+      try{
+        var j=await ghReq('PUT','state.json',{message:'Hub: '+ops.length+' change'+(ops.length>1?'s':''),content:b64e(JSON.stringify(st,null,1)),sha:R.sha,branch:'main'});
+        R.state=st;R.sha=j.content.sha;Q.splice(0,ops.length);persistQ();net='ok';loadErr='';cacheSave();
+      }catch(e){
+        if(e.code==='conflict'){var s=await readFile('state.json');R.state=s.data;R.sha=s.sha;continue}
+        throw e;
+      }
+    }
+  }catch(e){
+    if(e.code==='net')net='offline';
+    else{net='error';loadErr=e.code==='auth'?'GitHub did not accept the token or repository. Check both in Settings.':'GitHub returned an error ('+e.message+').'}
+  }
+  busy=false;recompute();schedule();
+}
+function poll(){
+  if(document.hidden||busy||!CFG||Q.length)return;
+  loadAll().then(function(){schedule()});
+}
+function saveTopic(code,patch){
+  var cur=S.topics[code]||{status:'Not started',confidence:null,notes:''};
+  var next={status:patch.status!==undefined?patch.status:cur.status,confidence:patch.confidence!==undefined?patch.confidence:cur.confidence,notes:patch.notes!==undefined?patch.notes:cur.notes,dirty:true,updatedAt:new Date().toISOString()};
+  enqueue([{t:'set',p:['topics',code],v:next}]);
+}
+function saveMock(n,patch){
+  var cur=S.mocks[n]||{provider:'',s1:null,s2:null,s1Left:null,s2Left:null,weakest:'',notes:''};
+  var next=Object.assign({},cur,patch,{dirty:true,updatedAt:new Date().toISOString()});
+  enqueue([{t:'set',p:['mocks',String(n)],v:next}]);
+}
+
+/* ---------- render ---------- */
+function schedule(){
+  if(tmr)return;
+  tmr=requestAnimationFrame(function(){tmr=null;
+    var a=document.activeElement;
+    if(a&&$('#main').contains(a)&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)){dirtyRender=true;return}
+    render();
+  });
+}
+function render(){
+  dirtyRender=false;
+  renderHeader();
+  var main=$('#main');
+  if(!CFG){main.innerHTML=vConnect();return}
+  if(!S.plan){
+    main.innerHTML=loadErr||net==='offline'
+      ?'<section class="panel"><h2>Cannot load your plan</h2><p class="muted" style="margin:0">'+esc(loadErr||'You are offline and this device has no saved copy yet. Reconnect and it will load.')+'</p><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" data-act="retry">Try again</button><button class="btn" data-act="settings">Settings</button></div></section>'
+      :'<section class="panel"><div class="skel" style="width:40%"></div><div class="skel" style="width:90%"></div><div class="skel" style="width:70%"></div><p class="muted small" style="margin:0">Loading your plan.</p></section>';
+    return}
+  var h={today:vToday,log:vLog,plan:vPlan,topics:vTopics,mocks:vMocks}[S.tab]();
+  main.innerHTML=h;
+  Array.prototype.forEach.call(document.querySelectorAll('#tabs button'),function(b){b.setAttribute('aria-selected',b.dataset.tab===S.tab?'true':'false')});
+  if(S.form)renderForm();
+  else if(S.settings)renderSettings();
+}
+function renderHeader(){
+  var n=waiting(),chip=$('#syncChip'),cls='',txt;
+  if(!CFG){txt='Not connected'}
+  else if(Q.length){txt=net==='offline'?'Offline · '+Q.length+' queued':net==='error'?'Not saved · '+Q.length+' queued':'Saving…';cls=net==='error'?' bad':' wait'}
+  else if(net==='error'){txt='GitHub problem';cls=' bad'}
+  else if(n){txt=n+' waiting for Excel';cls=' wait'}
+  else txt='In Excel';
+  chip.className='sync'+cls;
+  $('#syncText').textContent=txt;
+  if(S.plan){$('#brandSub').textContent='Exam '+fmtD(S.plan.dash.exam,true)+' (pending official date)'}
+}
+function vConnect(){
+  return '<section class="panel"><h2>Connect this device</h2>'
+   +'<p class="muted" style="margin:0">Your study log is stored in a private GitHub repository. Paste a token that can read and write that one repository. It stays in this browser and is never sent anywhere except GitHub.</p>'
+   +'<div class="f"><label for="cr">Data repository</label><input id="cr" value="igakuma/cfa-study-data" autocapitalize="off" autocorrect="off" spellcheck="false"></div>'
+   +'<div class="f"><label for="ct">Fine-grained token</label><input id="ct" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…"></div>'
+   +'<div class="err" id="cerr" role="alert">'+esc(S.connErr)+'</div>'
+   +'<div><button class="btn primary" data-act="connect">Connect</button></div>'
+   +'<details><summary>How to make the token</summary><ol>'
+   +'<li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>.</li>'
+   +'<li>Name it CFA Study Hub. Set the expiry to 30 June 2027 (custom).</li>'
+   +'<li>Under Repository access choose Only select repositories, then pick cfa-study-data.</li>'
+   +'<li>Under Permissions, open Repositories and set Contents to Read and write.</li>'
+   +'<li>Generate the token, copy it, paste it above. Do this once per device.</li></ol></details></section>';
+}
+function renderSettings(){
+  var m=S.meta&&S.meta.lastSync?new Date(S.meta.lastSync).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'never';
+  $('#overlay').innerHTML='<div class="veil" id="veil"><div class="sheet" role="dialog" aria-modal="true" aria-label="Settings"><div class="panel-head"><h2>Settings</h2><button type="button" class="btn small" data-act="close">Close</button></div>'
+   +'<div class="small"><div class="label">Data repository</div><div class="num">'+esc(CFG?CFG.repo:'')+'</div></div>'
+   +'<div class="small"><div class="label">Last synced to Excel</div>'+m+'</div>'
+   +'<div class="small"><div class="label">Waiting to reach GitHub</div>'+Q.length+' change'+(Q.length===1?'':'s')+'</div>'
+   +'<p class="small muted" style="margin:0">To bring new entries into the Excel workbook, run Sync CFA Study Hub on your laptop.</p>'
+   +'<div><button type="button" class="btn danger" data-act="disconnect">'+(S.discArm?'Tap again to disconnect':'Disconnect this device')+'</button></div></div></div>';
+}
+
+function vToday(){
+  var p=S.plan,t=today(),dm=dayMap(),D=p.dash;
+  var toExam=Math.max(0,diffDays(t,D.exam));
+  var done=sum(activeLog(),function(e){return e.hours});
+  var before=sum(p.days.filter(function(d){return d.d<t}),function(d){return d.tot});
+  var todayPlan=dm[t]?dm[t].tot:0;
+  var delta=done-before;
+  var phase=dm[t]?dm[t].phase:(t<D.start?'Not started':'Finished');
+  var fill=Math.min(100,done/D.targetHours*100),mark=Math.min(100,before/D.targetHours*100);
+  var qs=sum(activeLog(),function(e){return e.qs}),cor=sum(activeLog(),function(e){return e.correct});
+  var dl=p.deadlines.filter(function(x){return x.date>=t}).sort(function(a,b){return a.date<b.date?-1:1}).slice(0,3);
+  var recent=activeLog().slice().sort(function(a,b){return a.date===b.date?(b.createdAt||'')<(a.createdAt||'')?-1:1:(a.date<b.date?1:-1)}).slice(0,5);
+  var h='<section class="panel"><div class="hero"><div><div class="label">Days to exam</div><div class="big num">'+toExam+'</div></div>'
+   +'<div class="muted" style="padding-bottom:6px">'+Math.round(toExam/7*10)/10+' weeks · '+esc(phase)+'</div></div>'
+   +'<div><div class="bar" role="img" aria-label="Hours done '+r2(done)+' of '+D.targetHours+', plan through yesterday '+r2(before)+'"><span style="width:'+fill+'%"></span><em style="left:'+mark+'%"></em></div>'
+   +'<div class="small muted" style="margin-top:6px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span><span class="num">'+r2(done)+'</span> of <span class="num">'+D.targetHours+'</span> h done</span><span>Black tick = plan through yesterday</span></div></div>'
+   +'<div class="stats"><div class="stat"><span class="label">Vs plan</span><b style="color:var(--'+(delta>=0?'good':'bad')+')">'+(delta>=0?'+':'')+r2(delta)+' h</b></div>'
+   +'<div class="stat"><span class="label">Today planned</span><b>'+r2(todayPlan)+' h</b></div>'
+   +'<div class="stat"><span class="label">Questions</span><b>'+qs+'</b></div>'
+   +'<div class="stat"><span class="label">Accuracy</span><b>'+pct(qs>0?cor/qs:null)+'</b></div></div></section>';
+  h+=dayDetail(t,true);
+  h+='<div class="grid2"><section class="panel"><div class="panel-head"><h2>Latest entries</h2><button class="btn small" data-act="tab" data-tab="log">All</button></div>'+(recent.length?entryList(recent):'<div class="empty">Nothing logged yet. Tap Log study after your next block.</div>')+'</section>'
+   +'<section class="panel"><h2>Coming up</h2>'+(dl.length?dl.map(function(x){var n=diffDays(t,x.date);return '<div class="slot"><div class="what">'+esc(x.label)+'<div class="small muted">'+fmtD(x.date,true)+'</div></div><div class="num">'+(n===0?'today':n+' d')+'</div></div>'}).join(''):'<div class="empty">No dates ahead.</div>')+'</section></div>';
+  h+='<div class="small muted" style="text-align:center">'+esc(CFG?CFG.repo:'')+' · <button class="link" data-act="settings">Settings</button></div>';
+  return h;
+}
+
+function dayDetail(date,isToday){
+  var p=S.plan,d=dayMap()[date],L=logByDate()[date]||[];
+  if(!d){return '<section class="panel"><h2>'+(isToday?'Today':fmtD(date))+'</h2><div class="empty">'+(date<p.dash.start?'Your plan starts '+fmtD(p.dash.start)+'.':'No plan for this date.')+'</div><div><button class="btn small" data-act="log-date" data-date="'+date+'">Log a block for this date</button></div></section>'}
+  var act=sum(L,function(e){return e.hours});
+  var slots=[['Morning','Morning (peak)',d.mh,d.m],['Midday','Midday (light)',d.ph,d.p],['Late night','Late night (peak)',d.lh,d.l]];
+  var h='<section class="panel"><div class="panel-head"><h2>'+(isToday?'Today · ':'')+fmtD(date)+'</h2><span class="small muted">Week '+d.wk+' · '+esc(d.type)+' · '+esc(d.phase)+'</span></div>'
+   +'<div class="small"><span class="num">'+r2(act)+'</span> of <span class="num">'+r2(d.tot)+'</span> h logged'+(d.sets?' · item sets target <span class="num">'+d.sets+'</span> (done <span class="num">'+sum(L,function(e){return e.sets})+'</span>)':'')+'</div>';
+  if(d.rev)h+='<div><span class="pill accent">Spaced reviews due: '+esc(d.rev)+'</span></div>';
+  var shown=0;
+  slots.forEach(function(s){
+    if(!(s[2]>0)&&!s[3])return;shown++;
+    var logged=sum(L.filter(function(e){return e.block===s[0]}),function(e){return e.hours});
+    var ok=s[2]>0&&logged>=s[2]*0.9;
+    h+='<div class="slot"><div class="what"><div class="label">'+s[1]+' · '+fh(s[2])+'</div>'+esc(s[3]||'Free')+'</div>'
+     +'<div class="act">'+(s[2]>0?'<span class="pill '+(ok?'good':logged>0?'warn':'')+'">'+(ok?'Done':logged>0?fh(logged)+' logged':'Not logged')+'</span>':'')
+     +'<button class="btn small" data-act="log-slot" data-date="'+date+'" data-block="'+s[0]+'">Log</button></div></div>';
+  });
+  if(!shown)h+='<div class="empty">Rest day. Nothing planned.</div>';
+  if(L.length)h+='<div class="label" style="margin-top:4px">Logged this day</div>'+entryList(L);
+  h+='<div><button class="btn small" data-act="log-date" data-date="'+date+'">+ Other entry for this date</button></div></section>';
+  return h;
+}
+
+function entryList(es){
+  return '<div>'+es.map(function(e){
+    var acc=e.qs>0?' · '+e.correct+'/'+e.qs+' ('+pct(e.correct/e.qs)+')':'';
+    return '<button class="entry" data-act="edit" data-id="'+esc(e._id)+'"><span class="t"><b>'+esc(e.topic)+'</b>'+(e.dirty?'<i class="dot" title="Waiting for Excel"></i>':'')+'<br><span class="small muted">'+fmtS(e.date)+' · '+esc(e.block)+' · '+esc(e.activity)+(e.sets?' · '+e.sets+' sets':'')+acc+(e.notes?' · '+esc(e.notes):'')+'</span></span><span class="r num">'+r2(e.hours)+' h</span></button>';
+  }).join('')+'</div>';
+}
+
+function vLog(){
+  var es=activeLog().filter(function(e){return !S.filter||e.topic===S.filter}).sort(function(a,b){return a.date===b.date?((b.createdAt||'')<(a.createdAt||'')?-1:1):(a.date<b.date?1:-1)});
+  var groups={},order=[];
+  es.forEach(function(e){if(!groups[e.date]){groups[e.date]=[];order.push(e.date)}groups[e.date].push(e)});
+  var opts='<option value="">All topics</option>'+S.plan.topicList.map(function(t){return '<option'+(S.filter===t?' selected':'')+'>'+esc(t)+'</option>'}).join('');
+  var h='<section class="panel"><div class="panel-head"><h2>Study log</h2><span class="small muted"><span class="num">'+es.length+'</span> entries · <span class="num">'+r2(sum(es,function(e){return e.hours}))+'</span> h</span></div>'
+   +'<div class="f"><label for="flt">Filter</label><select id="flt" data-act="filter">'+opts+'</select></div>';
+  if(!es.length)h+='<div class="empty">No entries yet. Tap Log study to add the first one.</div>';
+  order.forEach(function(dte){h+='<div class="dategrp"><span>'+fmtD(dte)+'</span><span class="num muted">'+r2(sum(groups[dte],function(e){return e.hours}))+' h</span></div>'+entryList(groups[dte])});
+  return h+'</section>';
+}
+
+function vPlan(){
+  var p=S.plan,t=today(),L=logByDate(),sel=S.sel||(dayMap()[t]?t:p.days[0].d);
+  var cells=p.days.map(function(d){
+    var st=dayState(d,L,t),cls='cell '+(st==='up'?'':st)+(d.type==='Mock'?' mock':'')+(d.d===t?' today':'')+(d.d===sel?' sel':'');
+    var row=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].indexOf(d.dow)+1;
+    return '<button class="'+cls+'" style="grid-column:'+d.wk+';grid-row:'+row+'" data-act="pick" data-date="'+d.d+'" aria-label="'+fmtD(d.d)+'"></button>';
+  }).join('');
+  var wks={};
+  p.days.forEach(function(d){var w=wks[d.wk]=wks[d.wk]||{wk:d.wk,start:d.d,plan:0,act:0,sets:0,setsDone:0,qs:0,cor:0,cur:false};
+    w.plan+=d.tot;w.sets+=d.sets||0;if(d.d===t)w.cur=true;
+    (L[d.d]||[]).forEach(function(e){w.act+=e.hours||0;w.setsDone+=e.sets||0;w.qs+=e.qs||0;w.cor+=e.correct||0})});
+  var wl=Object.keys(wks).map(function(k){return wks[k]});
+  var max=Math.max.apply(null,wl.map(function(w){return Math.max(w.plan,w.act)}));
+  var bars=wl.map(function(w){return '<div class="wk'+(w.cur?' cur':'')+'" title="Week '+w.wk+': '+r2(w.act)+' of '+r2(w.plan)+' h"><div class="p" style="height:'+(w.plan/max*100)+'%"></div><div class="a" style="height:'+(w.act/max*100)+'%"></div></div>'}).join('');
+  var rows=wl.map(function(w){var v=w.act-w.plan;return '<tr'+(w.cur?' class="cur"':'')+'><td>'+w.wk+'</td><td>'+fmtS(w.start)+'</td><td class="num">'+r2(w.plan)+'</td><td class="num">'+r2(w.act)+'</td><td class="num" style="color:var(--'+(w.start>t?'ink-3':v>=0?'good':'bad')+')">'+(w.start>t?'–':(v>=0?'+':'')+r2(v))+'</td><td class="num">'+w.setsDone+'/'+w.sets+'</td><td class="num">'+w.qs+'</td><td class="num">'+pct(w.qs>0?w.cor/w.qs:null)+'</td></tr>'}).join('');
+  return '<section class="panel"><div class="panel-head"><h2>Road to the exam</h2><span class="small muted">One square per day, one column per week</span></div>'
+   +'<div class="heat">'+cells+'</div>'
+   +'<div class="legend"><span><i style="background:var(--accent);border-color:var(--accent)"></i>Done (90%+)</span><span><i style="background:var(--accent-soft);border-color:var(--accent)"></i>Part</span><span><i style="background:var(--bad-soft);border-color:var(--bad)"></i>Missed</span><span><i style="background:var(--warn);border-radius:50%"></i>Mock</span><span><i style="background:var(--ink)"></i>Exam</span></div></section>'
+   +'<div style="display:flex;gap:8px;justify-content:center"><button class="btn small" data-act="nav" data-step="-1">‹ Previous day</button><button class="btn small" data-act="nav" data-step="0">Today</button><button class="btn small" data-act="nav" data-step="1">Next day ›</button></div>'
+   +dayDetail(sel,sel===t)
+   +'<section class="panel"><h2>Hours by week</h2><div class="weeks" role="img" aria-label="Planned against actual study hours for each of the 32 weeks">'+bars+'</div>'
+   +'<div class="small muted">Outline = planned, filled = logged. Tallest week: <span class="num">'+r2(max)+'</span> h.</div>'
+   +'<div class="scroll"><table><thead><tr><th>Wk</th><th>Start</th><th>Plan h</th><th>Done h</th><th>Var</th><th>Sets</th><th>Qs</th><th>Acc</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
+}
+
+function vTopics(){
+  var p=S.plan,t=today();
+  return '<section class="panel"><div class="panel-head"><h2>Topics</h2><span class="small muted">Status, confidence and notes go back to Excel</span></div>'+p.topics.map(function(tp){
+    var st=S.topics[tp.code]||{status:'Not started',confidence:null,notes:''},ts=topicStats(tp.name);
+    var nextRev=[tp.r1,tp.r2,tp.r3].filter(function(x){return x>=t})[0];
+    var opts=p.dropdowns.status.map(function(s){return '<option'+(st.status===s?' selected':'')+'>'+s+'</option>'}).join('');
+    var bub=[1,2,3,4,5].map(function(i){return '<button type="button" class="'+(st.confidence>=i?'on':'')+'" data-act="conf" data-code="'+tp.code+'" data-v="'+i+'" aria-label="Confidence '+i+' of 5"></button>'}).join('');
+    return '<div class="topic"><div class="row"><div style="min-width:0"><h3>'+esc(tp.name)+'</h3><div class="small muted">'+esc(tp.code)+' · weight '+Math.round(tp.wLo*100)+'–'+Math.round(tp.wHi*100)+'% · learn '+fmtS(tp.start)+' to '+fmtS(tp.end)+'</div></div>'
+     +'<div>'+(tp.weak?'<span class="pill warn">Weak area</span> ':'')+(tp.new?'<span class="pill accent">New 2027</span>':'')+'</div></div>'
+     +'<div class="stats"><div class="stat"><span class="label">Hours</span><b>'+r2(ts.hours)+' / '+r2(tp.newH)+'</b></div><div class="stat"><span class="label">Questions</span><b>'+ts.qs+'</b></div><div class="stat"><span class="label">Accuracy</span><b>'+pct(ts.acc)+'</b></div><div class="stat"><span class="label">Next review</span><b>'+(nextRev?fmtS(nextRev):'–')+'</b></div></div>'
+     +'<div class="fgrid"><div class="f"><label for="st-'+tp.code+'">Status</label><select id="st-'+tp.code+'" data-act="status" data-code="'+tp.code+'">'+opts+'</select></div>'
+     +'<div class="f"><label>Confidence</label><div class="bubbles">'+bub+'</div></div>'
+     +'<div class="f full"><label for="nt-'+tp.code+'">Notes / weak sub-topics</label><textarea id="nt-'+tp.code+'" data-act="tnotes" data-code="'+tp.code+'">'+esc(st.notes)+'</textarea></div></div></div>';
+  }).join('')+'</section>';
+}
+
+function vMocks(){
+  var p=S.plan,t=today(),scored=[];
+  var rows=p.mocks.map(function(m){
+    var s=S.mocks[m.n]||{},tot=(s.s1==null&&s.s2==null)?null:(s.s1||0)+(s.s2||0),sc=tot==null?null:tot/88;
+    if(sc!=null)scored.push(sc);
+    var status=sc!=null?'Done':(m.date<t?'Overdue - log score':'Scheduled');
+    return '<div class="topic"><div class="row"><div><h3>Mock '+m.n+'</h3><div class="small muted">'+fmtD(m.date,true)+'</div></div><span class="pill '+(sc!=null?(sc>=m.target?'good':'warn'):(m.date<t?'bad':''))+'">'+status+(sc!=null?' · '+pct(sc)+' vs '+pct(m.target):'')+'</span></div>'
+     +'<div class="fgrid"><div class="f full"><label for="mp'+m.n+'">Provider / mock name</label><input id="mp'+m.n+'" data-act="mock" data-n="'+m.n+'" data-k="provider" value="'+esc(s.provider||'')+'"></div>'
+     +'<div class="f"><label for="m1'+m.n+'">Session 1 correct (of 44)</label><input id="m1'+m.n+'" type="number" min="0" max="44" inputmode="numeric" data-act="mock" data-n="'+m.n+'" data-k="s1" value="'+(s.s1==null?'':s.s1)+'"></div>'
+     +'<div class="f"><label for="m2'+m.n+'">Session 2 correct (of 44)</label><input id="m2'+m.n+'" type="number" min="0" max="44" inputmode="numeric" data-act="mock" data-n="'+m.n+'" data-k="s2" value="'+(s.s2==null?'':s.s2)+'"></div>'
+     +'<div class="f"><label for="l1'+m.n+'">Session 1 minutes left</label><input id="l1'+m.n+'" type="number" min="-60" max="132" inputmode="numeric" data-act="mock" data-n="'+m.n+'" data-k="s1Left" value="'+(s.s1Left==null?'':s.s1Left)+'"></div>'
+     +'<div class="f"><label for="l2'+m.n+'">Session 2 minutes left</label><input id="l2'+m.n+'" type="number" min="-60" max="132" inputmode="numeric" data-act="mock" data-n="'+m.n+'" data-k="s2Left" value="'+(s.s2Left==null?'':s.s2Left)+'"></div>'
+     +'<div class="f full"><label for="mw'+m.n+'">Weakest topics</label><input id="mw'+m.n+'" data-act="mock" data-n="'+m.n+'" data-k="weakest" value="'+esc(s.weakest||'')+'"></div>'
+     +'<div class="f full"><label for="mn'+m.n+'">Actions / notes</label><textarea id="mn'+m.n+'" data-act="mock" data-n="'+m.n+'" data-k="notes">'+esc(s.notes||'')+'</textarea></div></div></div>';
+  }).join('');
+  var avg=scored.length?scored.reduce(function(a,b){return a+b},0)/scored.length:null;
+  return '<section class="panel"><div class="panel-head"><h2>Mock exams</h2><span class="small muted">'+scored.length+' of '+p.mocks.length+' done · average '+pct(avg)+' · target '+pct(p.mocks[0].target)+'</span></div>'
+   +'<p class="small muted" style="margin:0">Target is a personal benchmark. CFA Institute does not publish a pass mark.</p>'+rows+'</section>';
+}
+
+/* ---------- log form ---------- */
+function openForm(init,id){
+  var p=S.plan;
+  S.form={id:id||null,v:Object.assign({date:today(),block:'Late night',activity:'New material',topic:p.topicList[0],hours:'',sets:'',qs:'',correct:'',notes:''},init||{}),err:'',del:false};
+  renderForm();
+}
+function renderForm(){
+  var f=S.form,v=f.v,p=S.plan,dd=p.dropdowns;
+  function opts(list,sel){return list.map(function(o){return '<option'+(o===sel?' selected':'')+'>'+esc(o)+'</option>'}).join('')}
+  var prac=/Timed item sets|Mock$|Error log/.test(v.activity);
+  $('#overlay').innerHTML='<div class="veil" id="veil"><form class="sheet" id="lf" role="dialog" aria-modal="true" aria-label="Log study"><div class="panel-head"><h2>'+(f.id?'Edit entry':'Log study')+'</h2><button type="button" class="btn small" data-act="close">Close</button></div>'
+   +'<div class="fgrid"><div class="f"><label for="fd">Date</label><input id="fd" type="date" value="'+esc(v.date)+'"></div>'
+   +'<div class="f"><label for="fb">Block</label><select id="fb">'+opts(dd.blocks,v.block)+'</select></div>'
+   +'<div class="f full"><label for="ft">Topic</label><select id="ft">'+opts(p.topicList,v.topic)+'</select></div>'
+   +'<div class="f"><label for="fa">Activity</label><select id="fa">'+opts(dd.activities,v.activity)+'</select></div>'
+   +'<div class="f"><label for="fh">Hours</label><input id="fh" type="number" step="0.25" min="0" max="16" inputmode="decimal" value="'+esc(v.hours)+'"></div>'
+   +(prac?'<div class="f"><label for="fs">Item sets done</label><input id="fs" type="number" min="0" inputmode="numeric" value="'+esc(v.sets)+'"></div><div class="f"><label for="fq">Questions attempted</label><input id="fq" type="number" min="0" inputmode="numeric" value="'+esc(v.qs)+'"></div><div class="f"><label for="fc">Correct</label><input id="fc" type="number" min="0" inputmode="numeric" value="'+esc(v.correct)+'"></div>':'')
+   +'<div class="f full"><label for="fn">Notes / follow-up</label><input id="fn" value="'+esc(v.notes)+'"></div></div>'
+   +'<div class="err" id="ferr" role="alert">'+esc(f.err)+'</div>'
+   +'<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn primary" type="submit">'+(f.id?'Save changes':'Save entry')+'</button>'+(f.id?'<button type="button" class="btn danger" data-act="del">'+(f.del?'Tap again to delete':'Delete')+'</button>':'')+'</div></form></div>';
+}
+function readForm(){
+  var v=S.form.v,g=function(i){var e=$('#'+i);return e?e.value:null};
+  v.date=g('fd');v.block=g('fb');v.topic=g('ft');v.activity=g('fa');v.hours=g('fh');v.notes=g('fn');
+  if($('#fs')){v.sets=g('fs');v.qs=g('fq');v.correct=g('fc')}
+}
+function submitForm(ev){
+  ev.preventDefault();readForm();
+  var f=S.form,v=f.v,h=num(v.hours),qs=num(v.qs),c=num(v.correct),sets=num(v.sets),prac=!!$('#fs');
+  var err='';
+  if(!v.date)err='Pick a date.';
+  else if(!(h>0&&h<=16))err='Enter hours between 0 and 16.';
+  else if(prac&&qs!=null&&c==null)err='Enter how many were correct.';
+  else if(prac&&c!=null&&qs==null)err='Enter questions attempted.';
+  else if(prac&&qs!=null&&c>qs)err='Correct cannot be more than questions attempted.';
+  if(err){f.err=err;$('#ferr').textContent=err;return}
+  var data={date:v.date,block:v.block,topic:v.topic,activity:v.activity,hours:h,sets:prac?sets:null,qs:prac?qs:null,correct:prac?c:null,notes:v.notes||'',dirty:true,deleted:false,updatedAt:new Date().toISOString()};
+  var id=f.id,full;
+  if(id){
+    var ex=S.log.filter(function(e){return e._id===id})[0]||{};
+    full=Object.assign({},ex,data);delete full._id;
+  }else{id=uid();full=Object.assign({excelRow:null,createdAt:data.updatedAt},data)}
+  S.form=null;$('#overlay').innerHTML='';
+  toast(f.id?'Saved':'Logged '+r2(h)+' h');
+  enqueue([{t:'set',p:['log',id],v:full}]);
+}
+function deleteEntry(){
+  var f=S.form;
+  if(!f.del){f.del=true;renderForm();setTimeout(function(){if(S.form===f&&f.del){f.del=false;renderForm()}},3000);return}
+  var e=S.log.filter(function(x){return x._id===f.id})[0];
+  if(!e)return;
+  var op;
+  if(e.excelRow==null)op={t:'del',p:['log',f.id]};
+  else{var full=Object.assign({},e,{deleted:true,dirty:true,updatedAt:new Date().toISOString()});delete full._id;op={t:'set',p:['log',f.id],v:full}}
+  S.form=null;$('#overlay').innerHTML='';
+  toast('Deleted');
+  enqueue([op]);
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest('[data-act],[data-tab]');
+  if(ev.target.id==='veil'){S.form=null;S.settings=false;S.discArm=false;$('#overlay').innerHTML='';return}
+  if(!b)return;
+  if(b.dataset.tab&&!b.dataset.act){S.tab=b.dataset.tab;store('cfaTab',S.tab);render();window.scrollTo(0,0);return}
+  var a=b.dataset.act;
+  if(a==='tab'){S.tab=b.dataset.tab;store('cfaTab',S.tab);render();window.scrollTo(0,0)}
+  else if(a==='pick'){S.sel=b.dataset.date;render()}
+  else if(a==='nav'){
+    var step=Number(b.dataset.step),t0=today(),days=S.plan.days,cur=S.sel||t0;
+    if(step===0)S.sel=t0;
+    else{var nd=new Date(dt(cur).getTime()+step*864e5).toLocaleDateString('en-CA');if(nd>=days[0].d&&nd<=days[days.length-1].d)S.sel=nd}
+    render();
+  }
+  else if(a==='close'){S.form=null;S.settings=false;S.discArm=false;$('#overlay').innerHTML=''}
+  else if(a==='settings'){S.settings=true;renderSettings()}
+  else if(a==='retry'){loadErr='';render();loadAll().then(function(){schedule();flush()})}
+  else if(a==='disconnect'){
+    if(!S.discArm){S.discArm=true;renderSettings();setTimeout(function(){if(S.discArm){S.discArm=false;if(S.settings)renderSettings()}},3000);return}
+    store('cfaCfg','');store('cfaCache','');store('cfaQ','');
+    CFG=null;R={state:null,sha:null,plan:null,planStamp:null};Q=[];net='ok';loadErr='';S.settings=false;S.discArm=false;S.plan=null;S.log=[];
+    $('#overlay').innerHTML='';render();
+  }
+  else if(a==='connect'){
+    var repo=($('#cr').value||'').trim(),tok=($('#ct').value||'').trim(),er=$('#cerr');
+    if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){er.textContent='Enter the repository as owner/name.';return}
+    if(tok.length<20){er.textContent='Paste the full token.';return}
+    er.textContent='Checking…';b.disabled=true;
+    var cfg={repo:repo,token:tok};
+    readFile('state.json',cfg).then(function(){
+      CFG=cfg;store('cfaCfg',JSON.stringify(cfg));S.connErr='';
+      return loadAll().then(function(){render();flush()});
+    },function(e){
+      b.disabled=false;
+      er.textContent=e.code==='auth'?'GitHub rejected that token or repository. Check the repository name and that the token has Contents read and write on it.':e.code==='net'?'Cannot reach GitHub. Check your connection.':'GitHub returned an error ('+e.message+').';
+    });
+  }
+  else if(a==='del'){deleteEntry()}
+  else if(a==='edit'){var e=S.log.filter(function(x){return x._id===b.dataset.id})[0];if(e)openForm({date:e.date,block:e.block,topic:e.topic,activity:e.activity,hours:e.hours,sets:e.sets==null?'':e.sets,qs:e.qs==null?'':e.qs,correct:e.correct==null?'':e.correct,notes:e.notes},e._id)}
+  else if(a==='log-date'){openForm({date:b.dataset.date})}
+  else if(a==='log-slot'){
+    var d=dayMap()[b.dataset.date],blk=b.dataset.block,txt=blk==='Morning'?d.m:blk==='Midday'?d.p:d.l,hrs=blk==='Morning'?d.mh:blk==='Midday'?d.ph:d.lh;
+    openForm({date:b.dataset.date,block:blk,activity:inferActivity(txt),topic:inferTopic(txt,d),hours:hrs||'',sets:inferSets(txt)==null?'':inferSets(txt)});
+  }
+  else if(a==='conf'){var cur=(S.topics[b.dataset.code]||{}).confidence,v=Number(b.dataset.v);saveTopic(b.dataset.code,{confidence:cur===v?null:v})}
+});
+document.addEventListener('change',function(ev){
+  var t=ev.target,a=t.dataset&&t.dataset.act;
+  if(t.id==='fa'&&S.form){readForm();renderForm();return}
+  if(a==='filter'){S.filter=t.value;render()}
+  else if(a==='status'){saveTopic(t.dataset.code,{status:t.value})}
+  else if(a==='tnotes'){saveTopic(t.dataset.code,{notes:t.value})}
+  else if(a==='mock'){
+    var k=t.dataset.k,val=t.value;
+    if(k==='s1'||k==='s2'){var n=num(val);if(n!=null&&(n<0||n>44)){toast('Enter 0 to 44');return}val=n}
+    else if(k==='s1Left'||k==='s2Left'){val=num(val)}
+    var patch={};patch[k]=val;saveMock(t.dataset.n,patch);
+  }
+});
+document.addEventListener('focusout',function(){if(dirtyRender)setTimeout(function(){var a=document.activeElement;if(!(a&&$('#main').contains(a)&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)))render()},60)});
+document.addEventListener('submit',function(ev){if(ev.target.id==='lf')submitForm(ev)});
+$('#addBtn').addEventListener('click',function(){if(S.plan)openForm()});
+$('#syncChip').addEventListener('click',function(){
+  if(!CFG){render();return}
+  S.settings=true;renderSettings();
+});
+document.addEventListener('visibilitychange',function(){if(!document.hidden){poll();flush();schedule()}});
+window.addEventListener('online',function(){net='ok';flush();poll()});
+
+/* ---------- boot ---------- */
+var saved=store('cfaTab');if(saved&&/^(today|log|plan|topics|mocks)$/.test(saved))S.tab=saved;
+loadCfg();
+try{Q=JSON.parse(store('cfaQ')||'[]')}catch(e){Q=[]}
+try{var c0=JSON.parse(store('cfaCache')||'null');if(c0&&c0.state){R.state=c0.state;R.sha=c0.sha;R.plan=c0.plan;R.planStamp=c0.planStamp}}catch(e){}
+recompute();
+render();
+if(CFG){loadAll().then(function(){schedule();flush()})}
+setInterval(poll,45000);
+})();
+</script>
+</body>
+</html>
