@@ -658,7 +658,11 @@ function renderForm(){
    +(rs.length?'<div class="f full"><label for="fr">Reading (optional)</label><select id="fr"><option value="">No specific reading</option>'+rs.map(function(r){var x=readingStatus(r.lm);return '<option value="'+r.lm+'"'+(String(v.lm)===String(r.lm)?' selected':'')+'>LM '+r.lm+' · '+esc(r.name)+(x==='Done'||x==='Reviewed'?' (done)':'')+'</option>'}).join('')+'</select></div>':'')
    +'<div class="f"><label for="fa">Activity</label><select id="fa">'+opts(dd.activities,v.activity)+'</select></div>'
    +'<div class="f"><label for="fh">Hours</label><input id="fh" type="number" step="0.25" min="0" max="16" inputmode="decimal" value="'+esc(v.hours)+'"></div>'
-   +(prac?'<div class="f"><label for="fs">Item sets done</label><input id="fs" type="number" min="0" inputmode="numeric" value="'+esc(v.sets)+'"></div><div class="f"><label for="fq">Questions attempted</label><input id="fq" type="number" min="0" inputmode="numeric" value="'+esc(v.qs)+'"></div><div class="f"><label for="fc">Correct</label><input id="fc" type="number" min="0" inputmode="numeric" value="'+esc(v.correct)+'"></div>':'')
+   +'<details id="pq" class="full"'+(prac||f.pq||v.sets||v.qs||v.correct?' open':'')+'><summary>Practice questions (optional)</summary><div class="fgrid" style="margin-top:10px;grid-template-columns:repeat(3,1fr)">'
+   +'<div class="f"><label for="fs">Item sets</label><input id="fs" type="number" min="0" inputmode="numeric" value="'+esc(v.sets)+'"></div>'
+   +'<div class="f"><label for="fq">Questions</label><input id="fq" type="number" min="0" inputmode="numeric" value="'+esc(v.qs)+'"></div>'
+   +'<div class="f"><label for="fc">Correct</label><input id="fc" type="number" min="0" inputmode="numeric" value="'+esc(v.correct)+'"></div>'
+   +'<div class="small muted full">Use this after any activity, for example practice questions at the end of a reading. Questions and Correct feed your accuracy by topic and reading.</div></div></details>'
    +'<div class="f full"><label for="fn">Notes / follow-up</label><input id="fn" value="'+esc(v.notes)+'"></div></div>'
    +'<div class="err" id="ferr" role="alert">'+esc(f.err)+'</div>'
    +'<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn primary" type="submit">'+(f.id?'Save changes':'Save entry')+'</button>'+(f.id?'<button type="button" class="btn danger" data-act="del">'+(f.del?'Tap again to delete':'Delete')+'</button>':'')+'</div></form></div>';
@@ -768,7 +772,7 @@ document.addEventListener('change',function(ev){
     var patch={};patch[k]=val;saveMock(t.dataset.n,patch);
   }
 });
-document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.tagName==='DETAILS'&&d.dataset.code)S.open[d.dataset.code]=d.open},true);
+document.addEventListener('toggle',function(ev){var d=ev.target;if(!d||d.tagName!=='DETAILS')return;if(d.dataset.code)S.open[d.dataset.code]=d.open;else if(d.id==='pq'&&S.form)S.form.pq=d.open},true);
 document.addEventListener('focusout',function(){if(dirtyRender)setTimeout(function(){var a=document.activeElement;if(!(a&&$('#main').contains(a)&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)))render()},60)});
 document.addEventListener('submit',function(ev){if(ev.target.id==='lf')submitForm(ev)});
 $('#addBtn').addEventListener('click',function(){if(S.plan)openForm()});
